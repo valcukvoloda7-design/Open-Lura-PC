@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="uk">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+  <link rel="stylesheet" href="./src/face.css">
+  <style>
+    * { box-sizing: border-box; }
+    html, body { width: 100%; height: 100%; margin: 0; overflow: hidden; background: transparent; }
+    body { color: #fff7fb; -webkit-user-select: none; user-select: none; }
+    #stage { width: 100%; height: 100%; display: grid; place-items: center; background: transparent;
+      --glow: #df6b9b; --blush: #ff9dc0; transform: scale(1); transform-origin: center; transition: transform 850ms cubic-bezier(.22,.75,.2,1); }
+    .lura-host { width: 100%; height: 100%; display: grid; place-items: center; touch-action: none; }
+    .lura-host svg { width: 100%; height: 100%; max-width: 100%; max-height: 100%; object-fit: contain; }
+  </style>
+</head>
+<body>
+  <div id="stage" class="lura-host" aria-label="Лура"></div>
+  <script type="module">
+    import { Face } from "./src/face.js";
+    const host = document.getElementById("stage");
+    const face = new Face(host, { idle: true, particles: true, viewBox: "88 118 824 430" });
+    let paletteAnimation = 0;
+    face.attach(host);
+    window.luraSetEmotion = (name, intensity = 0.82, duration = 4200) => {
+      if (!face) return;
+      if (duration > 0) face.react(name, duration, intensity);
+      else face.setEmotion(name, { intensity });
+    };
+    window.luraSetThinking = on => face.think(Boolean(on));
+    window.luraSetListening = on => face.listen(Boolean(on));
+    window.luraSpeak = text => face.speak(String(text || ""));
+    window.luraSetPalette = (glow, blush, ink) => {
+      const startGlow = getComputedStyle(host).getPropertyValue("--glow").trim() || "#df6b9b";
+      const startBlush = getComputedStyle(host).getPropertyValue("--blush").trim() || "#ff9dc0";
+      const toGlow = glow || "#df6b9b", toBlush = blush || "#ff9dc0";
+      const parse = value => value.match(/[\da-f]{2}/gi).map(v => parseInt(v, 16));
+      const fromG = parse(startGlow), fromB = parse(startBlush), destG = parse(toGlow), destB = parse(toBlush);
+      cancelAnimationFrame(paletteAnimation);
+      const began = performance.now(), duration = 620;
+      const frame = now => {
+        const t = Math.min(1, (now - began) / duration), k = t * t * (3 - 2 * t);
+        const color = (a, b) => "#" + a.map((v, i) => Math.round(v + (b[i] - v) * k).toString(16).padStart(2, "0")).join("");
+        host.style.setProperty("--glow", color(fromG, destG));
+        host.style.setProperty("--blush", color(fromB, destB));
+        if (t < 1) paletteAnimation = requestAnimationFrame(frame);
+      };
+      paletteAnimation = requestAnimationFrame(frame);
+      host.style.color = ink || "#ffffff";
+    };
+    window.luraSetCompact = (compact, orb = false) => {
+      host.style.transform = compact ? (orb ? "scale(.23)" : "scale(.28)") : "scale(1)";
+      if (compact && orb) face.setMode("night");
+      else face.setMode("");
+    };
+    window.luraReady = true;
+  </script>
+</body>
+</html>
